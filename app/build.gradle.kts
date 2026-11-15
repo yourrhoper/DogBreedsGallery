@@ -1,23 +1,37 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
-
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
 android {
     namespace = "com.example.dogbreedsgallery"
     compileSdk {
         version = release(37)
     }
-
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
     defaultConfig {
         applicationId = "com.example.dogbreedsgallery"
         minSdk = 27
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
-
+        buildConfigField(
+            "String",
+            "DOG_API_KEY",
+            "\"${localProperties.getProperty("DOG_API_KEY", "")}\""
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -31,9 +45,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-    }
-    buildFeatures {
-        compose = true
     }
 }
 
