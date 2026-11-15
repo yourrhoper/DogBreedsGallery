@@ -26,19 +26,18 @@ class BreedViewModel(
         viewModelScope.launch {
             searchQuery
                 .flatMapLatest { query ->
-                    if (query.isBlank()) {
-                        repository.getAllBreeds()
-                    } else {
-                        repository.searchBreeds(query)
-                    }
+                    if (query.isBlank()) repository.getAllBreeds()
+                    else repository.searchBreeds(query)
                 }
                 .collect { breeds ->
-                    _uiState.value = _uiState.value.copy(
-                        breeds = breeds
-                    )
+                    _uiState.value = _uiState.value.copy(breeds = breeds)
                 }
         }
-
+        viewModelScope.launch {
+            repository.getFavoriteBreeds().collect { favorites ->
+                _uiState.value = _uiState.value.copy(favoriteBreeds = favorites)
+            }
+        }
         refreshBreeds()
     }
 
