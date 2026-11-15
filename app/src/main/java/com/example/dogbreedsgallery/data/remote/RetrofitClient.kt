@@ -1,4 +1,4 @@
-package com.example.dogbreedsgallery.data.remote // настройка Retrofit, Moshi и OkHttp
+package com.example.dogbreedsgallery.data.remote
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -10,20 +10,27 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 object RetrofitClient {
 
     private const val BASE_URL = "https://api.thedogapi.com/v1/"
+    private const val API_KEY = "REDACTED"
 
-    private val loggingInterceptor = HttpLoggingInterceptor().apply { // позволяет видеть информацию о запросах в Logcat
-        level = HttpLoggingInterceptor.Level.BASIC
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val okHttpClient = OkHttpClient.Builder() // выполнение HTTP-запросов
+    private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .addHeader("x-api-key", API_KEY)
+                .build()
+            chain.proceed(request)
+        }
         .addInterceptor(loggingInterceptor)
         .build()
 
-    private val moshi = Moshi.Builder() // преобразует JSON в Kotlin-объекты
+    private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .build()
 
-    private val retrofit = Retrofit.Builder() // создаёт реализацию интерфейса DogApiService
+    private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(MoshiConverterFactory.create(moshi))

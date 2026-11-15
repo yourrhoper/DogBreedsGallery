@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BreedViewModel(
@@ -61,9 +62,15 @@ class BreedViewModel(
                     isLoading = false
                 )
             } catch (e: Exception) {
+                val errorMessage = if (e is HttpException) {
+                    e.response()?.errorBody()?.string() ?: "HTTP ${e.code()}"
+                } else {
+                    e.localizedMessage ?: "Не удалось загрузить породы"
+                }
+
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = e.localizedMessage ?: "Не удалось загрузить породы"
+                    error = errorMessage
                 )
             }
         }
