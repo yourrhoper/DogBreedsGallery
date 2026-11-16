@@ -64,7 +64,6 @@ fun AppNavigation(viewModel: BreedViewModel) {
                         }
                     )
                 }
-
                 entry<FavoritesRoute> {
                     FavoritesScreen(
                         viewModel = viewModel,
@@ -73,7 +72,6 @@ fun AppNavigation(viewModel: BreedViewModel) {
                         }
                     )
                 }
-
                 entry<BreedDetailsRoute> { route ->
                     val breed = (state.breeds + state.favoriteBreeds)
                         .firstOrNull { it.id == route.breedId }
@@ -81,6 +79,10 @@ fun AppNavigation(viewModel: BreedViewModel) {
                     if (breed != null) {
                         BreedDetailScreen(
                             breed = breed,
+                            uiState = state,
+                            onLoadImages = {
+                                viewModel.loadBreedImages(breed.id)
+                            },
                             onBack = {
                                 if (backStack.size > 1) {
                                     backStack.removeLastOrNull()

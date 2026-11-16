@@ -1,4 +1,3 @@
-
 package com.example.dogbreedsgallery.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -54,7 +53,6 @@ class BreedViewModel(
                 isLoading = true,
                 error = null
             )
-
             try {
                 repository.refreshBreeds()
                 _uiState.value = _uiState.value.copy(
@@ -66,10 +64,36 @@ class BreedViewModel(
                 } else {
                     e.localizedMessage ?: "Не удалось загрузить породы"
                 }
-
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = errorMessage
+                )
+            }
+        }
+    }
+
+    fun loadBreedImages(breedId: Int) { // Загрузка фотографий породы
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                breedImages = emptyList(),
+                isImagesLoading = true,
+                imagesError = null
+            )
+            try {
+                val images = repository.getBreedImages(breedId)
+                _uiState.value = _uiState.value.copy(
+                    breedImages = images,
+                    isImagesLoading = false
+                )
+            } catch (e: Exception) {
+                val errorMessage = if (e is HttpException) {
+                    e.response()?.errorBody()?.string() ?: "HTTP ${e.code()}"
+                } else {
+                    e.localizedMessage ?: "Не удалось загрузить фотографии"
+                }
+                _uiState.value = _uiState.value.copy(
+                    isImagesLoading = false,
+                    imagesError = errorMessage
                 )
             }
         }
