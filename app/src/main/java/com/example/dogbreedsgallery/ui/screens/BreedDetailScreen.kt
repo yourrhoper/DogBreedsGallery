@@ -1,8 +1,10 @@
 package com.example.dogbreedsgallery.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,11 +19,20 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.example.dogbreedsgallery.data.local.BreedEntity
 import com.example.dogbreedsgallery.viewmodel.BreedUiState
 
@@ -33,6 +44,8 @@ fun BreedDetailScreen(
     onBack: () -> Unit,
     onFavoriteClick: (BreedEntity) -> Unit
 ) {
+    var selectedImage by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(breed.id) {
         onLoadImages()
     }
@@ -48,13 +61,24 @@ fun BreedDetailScreen(
             Text("← Назад")
         }
 
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = breed.imageUrl.takeIf { it.isNotBlank() },
             contentDescription = breed.name,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp),
-            contentScale = ContentScale.Crop
+                .height(260.dp)
+                .clickable {
+                    if (breed.imageUrl.isNotBlank()) {
+                        selectedImage = breed.imageUrl
+                    }
+                },
+            contentScale = ContentScale.Crop,
+            loading = {
+                ImagePlaceholder("Загрузка фотографии...")
+            },
+            error = {
+                ImagePlaceholder("Не удалось загрузить фотографию")
+            }
         )
 
         Text(
@@ -85,12 +109,21 @@ fun BreedDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(uiState.breedImages) { imageUrl ->
-                        AsyncImage(
+                        SubcomposeAsyncImage(
                             model = imageUrl,
                             contentDescription = "Фотография ${breed.name}",
                             modifier = Modifier
-                                .size(width = 220.dp, height = 160.dp),
-                            contentScale = ContentScale.Crop
+                                .size(width = 220.dp, height = 160.dp)
+                                .clickable {
+                                    selectedImage = imageUrl
+                                },
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                ImagePlaceholder("Загрузка...")
+                            },
+                            error = {
+                                ImagePlaceholder("Ошибка загрузки")
+                            }
                         )
                     }
                 }
@@ -129,6 +162,67 @@ fun BreedDetailScreen(
                 if (breed.isFavorite) "Удалить из избранного"
                 else "Добавить в избранное"
             )
+        }
+    }
+
+    if (selectedImage != null) {
+        Dialog(
+            onDismissRequest = { selectedImage = null },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = selectedImage,
+                    contentDescription = "Полноэкранная фотография",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+                Text(
+                    text = "×",
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(20.dp)
+                        .clickable {
+                            selectedImage = null
+                        },
+                    color = Color.White,
+                    fontSize = 32.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ImagePlaceholder(message: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.LightGray),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (message.startsWith("Загрузка")) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp)
+                )
+            } else {
+                Text("⚠")
+            }
+            Text(message)
         }
     }
 }

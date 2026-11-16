@@ -1,4 +1,3 @@
-
 package com.example.dogbreedsgallery.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,8 +11,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.dogbreedsgallery.ui.components.BreedCard
 import com.example.dogbreedsgallery.viewmodel.BreedViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogScreen(
     viewModel: BreedViewModel,
@@ -59,7 +61,9 @@ fun CatalogScreen(
 
         if (state.isLoading && state.breeds.isEmpty()) {
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -68,7 +72,9 @@ fun CatalogScreen(
             }
         } else if (state.error != null && state.breeds.isEmpty()) {
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -80,29 +86,37 @@ fun CatalogScreen(
             }
         } else if (state.breeds.isEmpty()) {
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text("Породы не найдены")
             }
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 160.dp),
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            PullToRefreshBox(
+                isRefreshing = state.isLoading,
+                onRefresh = viewModel::refreshBreeds,
+                modifier = Modifier.weight(1f)
             ) {
-                items(
-                    items = state.breeds,
-                    key = { it.id }
-                ) { breed ->
-                    BreedCard(
-                        breed = breed,
-                        onBreedClick = onBreedClick,
-                        onFavoriteClick = viewModel::toggleFavorite
-                    )
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = state.breeds,
+                        key = { it.id }
+                    ) { breed ->
+                        BreedCard(
+                            breed = breed,
+                            onBreedClick = onBreedClick,
+                            onFavoriteClick = viewModel::toggleFavorite
+                        )
+                    }
                 }
             }
         }

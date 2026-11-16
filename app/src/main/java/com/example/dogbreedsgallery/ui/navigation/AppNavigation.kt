@@ -18,6 +18,10 @@ import com.example.dogbreedsgallery.ui.screens.CatalogScreen
 import com.example.dogbreedsgallery.ui.screens.FavoritesScreen
 import com.example.dogbreedsgallery.ui.screens.BreedDetailScreen
 import com.example.dogbreedsgallery.viewmodel.BreedViewModel
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun AppNavigation(viewModel: BreedViewModel) {
@@ -25,8 +29,17 @@ fun AppNavigation(viewModel: BreedViewModel) {
         mutableStateListOf<NavKey>(CatalogRoute)
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
         bottomBar = {
             if (backStack.lastOrNull() !is BreedDetailsRoute) {
                 NavigationBar {

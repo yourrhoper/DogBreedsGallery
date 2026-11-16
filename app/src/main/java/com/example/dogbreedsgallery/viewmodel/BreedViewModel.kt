@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.dogbreedsgallery.data.local.BreedEntity
 import com.example.dogbreedsgallery.data.repository.BreedRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
@@ -18,6 +20,9 @@ class BreedViewModel(
 
     private val _uiState = MutableStateFlow(BreedUiState()) // Получение данных
     val uiState = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<String>()
+    val events = _events.asSharedFlow()
 
     private val searchQuery = MutableStateFlow("")
 
@@ -42,9 +47,7 @@ class BreedViewModel(
 
     fun onSearchQueryChange(query: String) { // Поиск
         searchQuery.value = query
-        _uiState.value = _uiState.value.copy(
-            searchQuery = query
-        )
+        _uiState.value = _uiState.value.copy(searchQuery = query)
     }
 
     fun refreshBreeds() { // Обновление каталога
@@ -55,9 +58,7 @@ class BreedViewModel(
             )
             try {
                 repository.refreshBreeds()
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false
-                )
+                _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
                 val errorMessage = if (e is HttpException) {
                     e.response()?.errorBody()?.string() ?: "HTTP ${e.code()}"
@@ -101,10 +102,19 @@ class BreedViewModel(
 
     fun toggleFavorite(breed: BreedEntity) { // Избранное
         viewModelScope.launch {
-            repository.updateFavorite(
-                breedId = breed.id,
-                isFavorite = !breed.isFavorite
-            )
+            try {
+                val newFavoriteStatus = !breed.isFavorite
+                repository.updateFavorite(
+                    breedId = breed.id,
+                    isFavorite = newFavoriteStatus
+                )
+                _events.emit(
+                    if (newFavoriteStatus) "Добавлено в избранное"
+                    else "Удалено из избранного"
+                )
+            } catch (e: Exception) {
+                _events.emit("Не удалось изменить избранное")
+            }
         }
     }
 }
