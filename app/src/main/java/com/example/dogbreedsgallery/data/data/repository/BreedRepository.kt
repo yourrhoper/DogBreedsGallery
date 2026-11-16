@@ -2,43 +2,29 @@ package com.example.dogbreedsgallery.data.repository
 
 import com.example.dogbreedsgallery.data.local.BreedDao
 import com.example.dogbreedsgallery.data.local.BreedEntity
+import com.example.dogbreedsgallery.data.local.BreedImageDao
+import com.example.dogbreedsgallery.data.local.BreedImageEntity
 import com.example.dogbreedsgallery.data.remote.DogApiService
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
 class BreedRepository(
     private val api: DogApiService,
-    private val dao: BreedDao
+    private val dao: BreedDao,
+    private val imageDao: BreedImageDao
 ) {
+    fun getAllBreeds(): Flow<List<BreedEntity>> = dao.getAllBreeds()
 
-    // Получение всех пород из локальной базы
-    fun getAllBreeds(): Flow<List<BreedEntity>> {
-        return dao.getAllBreeds()
-    }
+    fun getFavoriteBreeds(): Flow<List<BreedEntity>> = dao.getFavoriteBreeds()
 
-    // Получение избранных пород
-    fun getFavoriteBreeds(): Flow<List<BreedEntity>> {
-        return dao.getFavoriteBreeds()
-    }
+    fun getBreedById(breedId: Int): Flow<BreedEntity?> = dao.getBreedById(breedId)
 
-    // Получение одной породы по ID
-    fun getBreedById(breedId: Int): Flow<BreedEntity?> {
-        return dao.getBreedById(breedId)
-    }
+    fun searchBreeds(query: String): Flow<List<BreedEntity>> = dao.searchBreeds(query)
 
-    // Поиск пород по названию
-    fun searchBreeds(query: String): Flow<List<BreedEntity>> {
-        return dao.searchBreeds(query)
-    }
-
-    // Загрузка пород из API и сохранение в Room
     suspend fun refreshBreeds() {
         val remoteBreeds = api.getBreeds()
         val localBreeds = dao.getAllBreeds().first()
-
-        val localFavorites = localBreeds.associate {
-            it.id to it.isFavorite
-        }
+        val localFavorites = localBreeds.associate { it.id to it.isFavorite }
 
         val breeds = remoteBreeds.map { breed ->
             BreedEntity(
@@ -54,16 +40,43 @@ class BreedRepository(
         }
 
         dao.insertBreeds(breeds)
+
+        breeds.forEach { breed ->
+            dao.updateBreedDetails(
+                id = breed.id,
+                name = breed.name,
+                temperament = breed.temperament,
+                origin = breed.origin,
+                lifeSpan = breed.lifeSpan,
+                description = breed.description,
+                imageUrl = breed.imageUrl
+            )
+        }
     }
 
-    // Изменение статуса избранного
     suspend fun updateFavorite(breedId: Int, isFavorite: Boolean) {
         dao.updateFavorite(breedId, isFavorite)
     }
 
-    // Загрузка дополнительных фотографий породы
     suspend fun getBreedImages(breedId: Int): List<String> {
-        return api.getBreedImages(breedId)
-            .map { it.url }
+        val localImages = imageDao.getImagesByBreedId(breedId)
+        if (localImages.isNotEmpty()) {
+            return localImages.map { it.url }
+        }
+
+        val remoteImages = api.getBreedImages(breedId)
+        val images = remoteImages.map { image ->
+            BreedImageEntity(
+                id = image.id,
+                breedId = breedId,
+                url = image.url
+            )
+        }
+
+        if (images.isNotEmpty()) {
+            imageDao.insertImages(images)
+        }
+
+        return images.map { it.url }
     }
 }

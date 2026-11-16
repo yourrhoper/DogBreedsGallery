@@ -4,11 +4,15 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [BreedEntity::class], // содержит список сущностей
-    version = 1, // первая версия базы
+    entities = [
+        BreedEntity::class,
+        BreedImageEntity::class
+    ],
+    version = 2,
     exportSchema = false
 )
 abstract class DogDatabase : RoomDatabase() {
 
-    abstract fun breedDao(): BreedDao // предоставляет доступ к DAO
+    abstract fun breedDao(): BreedDao
+    abstract fun breedImageDao(): BreedImageDao
 }
