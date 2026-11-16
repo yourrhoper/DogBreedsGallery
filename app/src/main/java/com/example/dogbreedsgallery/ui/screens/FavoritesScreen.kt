@@ -1,4 +1,3 @@
-
 package com.example.dogbreedsgallery.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement

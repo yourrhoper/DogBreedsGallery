@@ -12,13 +12,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BreedViewModel(
     private val repository: BreedRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(BreedUiState()) // Получение данных
+    private val _uiState = MutableStateFlow(BreedUiState())
     val uiState = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<String>()
@@ -45,35 +46,29 @@ class BreedViewModel(
         refreshBreeds()
     }
 
-    fun onSearchQueryChange(query: String) { // Поиск
+    fun onSearchQueryChange(query: String) {
         searchQuery.value = query
         _uiState.value = _uiState.value.copy(searchQuery = query)
     }
 
-    fun refreshBreeds() { // Обновление каталога
+    fun refreshBreeds() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                error = null
-            )
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 repository.refreshBreeds()
                 _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
-                val errorMessage = if (e is HttpException) {
-                    e.response()?.errorBody()?.string() ?: "HTTP ${e.code()}"
-                } else {
-                    e.localizedMessage ?: "Не удалось загрузить породы"
+                val errorMessage = when (e) {
+                    is IOException -> "Нет подключения к интернету. Проверьте сеть."
+                    is HttpException -> "Ошибка сервера: HTTP ${e.code()}"
+                    else -> "Не удалось загрузить породы"
                 }
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = errorMessage
-                )
+                _uiState.value = _uiState.value.copy(isLoading = false, error = errorMessage)
             }
         }
     }
 
-    fun loadBreedImages(breedId: Int) { // Загрузка фотографий породы
+    fun loadBreedImages(breedId: Int) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 breedImages = emptyList(),
@@ -87,10 +82,10 @@ class BreedViewModel(
                     isImagesLoading = false
                 )
             } catch (e: Exception) {
-                val errorMessage = if (e is HttpException) {
-                    e.response()?.errorBody()?.string() ?: "HTTP ${e.code()}"
-                } else {
-                    e.localizedMessage ?: "Не удалось загрузить фотографии"
+                val errorMessage = when (e) {
+                    is IOException -> "Нет подключения к интернету. Проверьте сеть."
+                    is HttpException -> "Не удалось загрузить фотографии. Ошибка сервера."
+                    else -> "Не удалось загрузить фотографии. Попробуйте позже."
                 }
                 _uiState.value = _uiState.value.copy(
                     isImagesLoading = false,
@@ -100,14 +95,11 @@ class BreedViewModel(
         }
     }
 
-    fun toggleFavorite(breed: BreedEntity) { // Избранное
+    fun toggleFavorite(breed: BreedEntity) {
         viewModelScope.launch {
             try {
                 val newFavoriteStatus = !breed.isFavorite
-                repository.updateFavorite(
-                    breedId = breed.id,
-                    isFavorite = newFavoriteStatus
-                )
+                repository.updateFavorite(breed.id, newFavoriteStatus)
                 _events.emit(
                     if (newFavoriteStatus) "Добавлено в избранное"
                     else "Удалено из избранного"
